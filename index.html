@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aim Trainer Studio - 1vs1 Live Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0b0b16;
+            font-family: 'Montserrat', sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* Capas de Interfaz (Menús) */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, rgba(16,16,32,0.8) 0%, rgba(5,5,10,0.98) 100%);
+            transition: opacity 0.2s ease;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 {
+            font-size: 3.8rem;
+            margin-bottom: 0.5rem;
+            color: #00ffff;
+            text-shadow: 0 0 15px #00ffff, 4px 4px 0px #ff007f;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(12px);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 2px solid rgba(0, 255, 255, 0.2);
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            max-width: 440px;
+            width: 90%;
+        }
+
+        .btn {
+            background: linear-gradient(90deg, #ff007f, #00ffff);
+            border: none;
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 8px 0;
+            width: 100%;
+            transition: transform 0.1s, filter 0.2s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);
+        }
+
+        .btn:hover {
+            transform: scale(1.02);
+            filter: brightness(1.2);
+        }
+
+        .btn-secondary { 
+            background: linear-gradient(90deg, #334155, #1e293b); 
+            box-shadow: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #b91c1c, #ef4444);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Selector de Mapas Estilizado */
+        .map-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+            width: 100%;
+        }
+
+        .map-card {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .map-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .fortnite-style { border-color: #ff007f; box-shadow: 0 0 10px rgba(255,0,127,0.2); }
+        .fortnite-style h3 { color: #ff007f; margin: 5px 0; }
+        .aimlabs-style { border-color: #00ffff; box-shadow: 0 0 10px rgba(0,255,255,0.2); }
+        .aimlabs-style h3 { color: #00ffff; margin: 5px 0; }
+
+        .settings-group { margin: 12px 0; text-align: left; }
+        .settings-group label { display: block; margin-bottom: 4px; font-weight: bold; color: #00ffff; font-size: 0.85rem;}
+        .settings-group input[type="range"] { width: 100%; cursor: pointer; }
+        .settings-group input[type="text"] { 
+            width: 90%; padding: 12px; border-radius: 8px; border: 1px solid #00ffff; font-size: 1rem;
+            background: rgba(0,0,0,0.6); color: #fff; margin-bottom: 12px; text-align: center;
+        }
+
+        /* HUD del Juego */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5; pointer-events: none;
+        }
+
+        .hud-stats {
+            position: absolute;
+            top: 25px;
+            padding: 15px 30px;
+            background: rgba(10, 10, 20, 0.85);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            font-size: 1.2rem;
+            font-weight: bold;
+            backdrop-filter: blur(6px);
+            pointer-events: none;
+        }
+
+        #hud-left { left: 25px; border-left: 6px solid #00ffff; }
+        #hud-right { right: 25px; border-right: 6px solid #ff007f; text-align: right;}
+
+        .level-title { color: #ffaa00; font-size: 0.85rem; text-transform: uppercase; display: block; margin-top: 4px; }
+        .controls-tip { color: #94a3b8; font-size: 0.75rem; display: block; margin-top: 8px; font-weight: normal; }
+
+        /* Retícula Central Avanzada */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            background-color: #00ffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #00ffff;
+            pointer-events: none;
+            transition: transform 0.05s, background-color 0.05s;
+        }
+
+        #hit-marker {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 24px; height: 24px;
+            transform: translate(-50%, -50%) rotate(45deg);
+            border: 2px solid transparent;
+            pointer-events: none;
+            transition: all 0.05s;
+        }
+        .hit { border-color: #ff0055 !important; width: 34px !important; height: 34px !important; }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="lobby-ui" class="ui-layer">
+        <h1>Aim Trainer Hub</h1>
+        <div class="panel">
+            <button id="btn-solo" class="btn">Entrenamiento Individual</button>
+            <button id="btn-multi" class="btn btn-secondary">Modo Multijugador</button>
+            <button id="btn-reset" class="btn btn-danger">Reiniciar Progreso</button>
+            
+            <hr style="border-color: rgba(0,255,255,0.1); margin: 18px 0;">
+            
+            <div class="settings-group">
+                <label>FOV de Cámara: <span id="fov-val">90</span></label>
+                <input type="range" id="fov-slider" min="70" max="110" value="90">
+            </div>
+            <div class="settings-group">
+                <label>Sensibilidad de Ratón: <span id="sens-val">1.0</span></label>
+                <input type="range" id="sens-slider" min="0.1" max="4" step="0.1" value="1.0">
+            </div>
+        </div>
+    </div>
+
+    <div id="map-ui" class="ui-layer hidden">
+        <h1>Elige tu Entorno</h1>
+        <div class="panel" style="max-width: 480px;">
+            <div class="map-grid">
+                <div id="map-fortnite" class="map-card fortnite-style">
+                    <h3>FORTNITE</h3>
+                    <p style="font-size:0.75rem; color:#cbd5e1; margin:0;">Estilo modo creativo. Neón, suelo morado y cielo oscuro cyber.</p>
+                </div>
+                <div id="map-aimlabs" class="map-card aimlabs-style">
+                    <h3>AIMLABS</h3>
+                    <p style="font-size:0.75rem; color:#cbd5e1; margin:0;">Gris minimalista. ¡Incluye cajas colosales para escalar y hacer parkour!</p>
+                </div>
+            </div>
+            <button id="btn-map-back" class="btn btn-secondary">Volver al Menú</button>
+        </div>
+    </div>
+
+    <div id="multi-ui" class="ui-layer hidden">
+        <h1>Salas de Competencia</h1>
+        <div class="panel">
+            <div class="settings-group">
+                <input type="text" id="room-code" placeholder="CÓDIGO DE SALA" autocomplete="off">
+            </div>
+            <button id="btn-join" class="btn">Unirse a Sala</button>
+            <button id="btn-create" class="btn" style="background: linear-gradient(90deg, #ffaa00, #ff5500); box-shadow: 0 4px 15px rgba(255,170,0,0.4);">Crear Nueva Sala</button>
+            <button id="btn-back" class="btn btn-secondary">Volver</button>
+        </div>
+    </div>
+
+    <div id="hud" class="hidden">
+        <div id="crosshair"></div>
+        <div id="hit-marker"></div>
+        
+        <div id="hud-left" class="hud-stats">
+            Nivel: <span id="ui-level">1</span>
+            <span id="ui-level-desc" class="level-title">Blancos Fijos</span>
+            Progreso: <span id="ui-score">0</span> / <span id="ui-target">5</span>
+            <span class="controls-tip">Mover: [WASD] | Saltar: [ESPACIO]</span>
+        </div>
+        
+        <div id="hud-right" class="hud-stats hidden">
+            <span style="color:#ff007f; font-size: 0.85em; text-transform: uppercase;">Rival Online</span><br>
+            Nivel: <span id="ui-enemy-level">1</span><br>
+            Puntos: <span id="ui-enemy-score">0</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, set, onValue, update, onDisconnect } from 'firebase/database';
+
+        // ==========================================
+        // 🛠️ CONFIGURACIÓN DE FIREBASE
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            databaseURL: "https://tu-proyecto-default-rtdb.firebaseio.com",
+            projectId: "tu-proyecto",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+
+        let app, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+        } catch(e) {
+            console.warn("Modo offline activado localmente.");
+        }
+
+        let isMultiplayer = false;
+        let currentRoomId = null;
+        const playerId = "player_" + Math.random().toString(36).substring(2, 9);
+        
+        // Variables de Red para el 1vs1
+        let enemyAvatar = null; // Malla 3D del amigo en tu pantalla
+        let syncThrottle = 0;
+
+        // ==========================================
+        // 🎮 MOTOR Y VARIABLES DE ESTADO
+        // ==========================================
+        let scene, camera, renderer, controls;
+        let raycaster = new THREE.Raycaster();
+        let targetsArray = []; 
+        let mapObjects = []; 
+        let obstaclesArray = []; 
+        let clock = new THREE.Clock();
+        
+        let stats = { level: 1, score: 0, nextLevelReq: 5 };
+        let settings = { fov: 90, sens: 1.0 };
+        let selectedMap = 'fortnite'; 
+
+        // Variables de Físicas del Jugador
+        let keyboard = { w: false, a: false, s: false, d: false };
+        let playerVelocity = new THREE.Vector3();
+        let isGrounded = true;
+        const PLAYER_HEIGHT = 1.6;
+        const GRAVITY = 32.0; 
+        const JUMP_FORCE = 11.0;
+
+        const levelDescriptions = {
+            1: "Blancos Fijos (Precisión)",
+            2: "Movimiento Lateral (Tracking)",
+            3: "Popcorn (Físicas de Salto)",
+            4: "Presión Temporal (Encogimiento)"
+        };
+
+        const uiLobby = document.getElementById('lobby-ui');
+        const uiMulti = document.getElementById('multi-ui');
+        const uiMap = document.getElementById('map-ui');
+        const uiHud = document.getElementById('hud');
+        
+        function initGame() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(settings.fov, window.innerWidth / window.innerHeight, 0.1, 1000);
+            resetPlayer();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new PointerLockControls(camera, document.body);
+            controls.pointerSpeed = settings.sens;
+            
+            controls.addEventListener('lock', () => { 
+                uiLobby.classList.add('hidden'); 
+                uiMulti.classList.add('hidden'); 
+                uiMap.classList.add('hidden'); 
+                uiHud.classList.remove('hidden'); 
+            });
+            controls.addEventListener('unlock', () => { 
+                uiHud.classList.add('hidden'); 
+                uiLobby.classList.remove('hidden'); 
+            });
+
+            buildEnvironment();
+
+            window.addEventListener('mousedown', shoot);
+            window.addEventListener('keydown', (e) => handleKey(e, true));
+            window.addEventListener('keyup', (e) => handleKey(e, false));
+            window.addEventListener('resize', onWindowResize);
+
+            renderer.setAnimationLoop(animate);
+            
+            if (!isMultiplayer) {
+                spawnWave();
+            }
+        }
+
+        function resetPlayer() {
+            // En 1vs1, el jugador 2 empieza ligeramente desplazado para no aparecer uno dentro del otro
+            const offset = isMultiplayer ? (Math.random() - 0.5) * 5 : 0;
+            camera.position.set(offset, PLAYER_HEIGHT, 6);
+            playerVelocity.set(0, 0, 0);
+            isGrounded = true;
+        }
+
+        // ==========================================
+        // 🧱 CONSTRUCCIÓN DE MAPAS
+        // ==========================================
+        function buildEnvironment() {
+            mapObjects.forEach(obj => scene.remove(obj));
+            obstaclesArray.forEach(obj => scene.remove(obj));
+            mapObjects = [];
+            obstaclesArray = [];
+            enemyAvatar = null; 
+
+            const ambient = new THREE.AmbientLight(0xffffff, selectedMap === 'fortnite' ? 0.3 : 0.6);
+            scene.add(ambient);
+            mapObjects.push(ambient);
+
+            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+            sun.position.set(10, 25, 10);
+            scene.add(sun);
+            mapObjects.push(sun);
+
+            if (selectedMap === 'fortnite') {
+                scene.background = new THREE.Color('#110926');
+                scene.fog = new THREE.FogExp2('#110926', 0.02);
+
+                const floorGeo = new THREE.PlaneGeometry(150, 150);
+                const floorMat = new THREE.MeshStandardMaterial({ color: '#07040f', roughness: 0.5 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                scene.add(floor);
+                mapObjects.push(floor);
+
+                const grid = new THREE.GridHelper(150, 50, '#ff007f', '#00ffff');
+                grid.position.y = 0.01;
+                scene.add(grid);
+                mapObjects.push(grid);
+
+            } else {
+                scene.background = new THREE.Color('#94a3b8'); 
+                scene.fog = new THREE.FogExp2('#94a3b8', 0.015);
+
+                const floorGeo = new THREE.PlaneGeometry(40, 40);
+                const floorMat = new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.7 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                scene.add(floor);
+                mapObjects.push(floor);
+
+                const grid = new THREE.GridHelper(40, 20, '#64748b', '#64748b');
+                grid.position.y = 0.01;
+                scene.add(grid);
+                mapObjects.push(grid);
+
+                const wallMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.8 });
+                
+                const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(40, 18), wallMat);
+                frontWall.position.set(0, 9, -15);
+                scene.add(frontWall);
+                mapObjects.push(frontWall);
+
+                const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(30, 18), wallMat);
+                leftWall.position.set(-20, 9, 0);
+                leftWall.rotation.y = Math.PI / 2;
+                scene.add(leftWall);
+                mapObjects.push(leftWall);
+
+                const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(30, 18), wallMat);
+                rightWall.position.set(20, 9, 0);
+                rightWall.rotation.y = -Math.PI / 2;
+                scene.add(rightWall);
+                mapObjects.push(rightWall);
+
+                const boxMat = new THREE.MeshStandardMaterial({ color: '#718096', roughness: 0.5 });
+                
+                const box1 = new THREE.Mesh(new THREE.BoxGeometry(4, 1.2, 4), boxMat);
+                box1.position.set(0, 0.6, 1);
+                scene.add(box1);
+                obstaclesArray.push(box1);
+
+                const box2 = new THREE.Mesh(new THREE.BoxGeometry(3, 2.4, 3), boxMat);
+                box2.position.set(-5, 1.2, -2);
+                scene.add(box2);
+                obstaclesArray.push(box2);
+
+                const box3 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.8, 3.5), boxMat);
+                box3.position.set(5, 0.9, -1);
+                scene.add(box3);
+                obstaclesArray.push(box3);
+            }
+        }
+
+        // ==========================================
+        // 👤 CREACIÓN DEL AVATAR DEL ENEMIGO (1VS1)
+        // ==========================================
+        function createEnemyMesh() {
+            const group = new THREE.Group();
+            
+            // Cuerpo (Cápsula de Neon Estilizada)
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: '#ff007f', 
+                emissive: '#ff0055',
+                emissiveIntensity: 0.5 
+            });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.75;
+            group.add(body);
+
+            // Visor/Cabeza para saber hacia dónde mira
+            const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.set(0, 1.4, -0.1);
+            group.add(head);
+
+            scene.add(group);
+            return group;
+        }
+
+        // ==========================================
+        // 🎯 DIANAS COMPATIBLES CON RAYCAST
+        // ==========================================
+        function createDiana(radius, customId) {
+            const group = new THREE.Group();
+            const thick = 0.04;
+
+            const cOuter = selectedMap === 'fortnite' ? '#00ffff' : '#0284c7';
+            const cMid = selectedMap === 'fortnite' ? '#ff007f' : '#38bdf8';
+            const cCenter = selectedMap === 'fortnite' ? '#ffff00' : '#ffffff';
+
+            const outM = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, thick, 32), new THREE.MeshStandardMaterial({ color: cOuter }));
+            outM.rotation.x = Math.PI / 2;
+            group.add(outM);
+
+            const midM = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.66, radius * 0.66, thick + 0.01, 32), new THREE.MeshStandardMaterial({ color: cMid }));
+            midM.rotation.x = Math.PI / 2;
+            group.add(midM);
+
+            const cenM = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.3, radius * 0.3, thick + 0.02, 32), new THREE.MeshStandardMaterial({ color: cCenter }));
+            cenM.rotation.x = Math.PI / 2;
+            group.add(cenM);
+
+            group.userData.isTargetRoot = true;
+            group.userData.targetId = customId || Math.random().toString(36).substring(2,9);
+            return group;
+        }
+
+        function spawnWave(sharedTargetsData) {
+            targetsArray.forEach(t => scene.remove(t.group));
+            targetsArray = [];
+
+            // Si estamos en multijugador, las dianas las dicta la base de datos compartida
+            if (isMultiplayer && sharedTargetsData) {
+                Object.keys(sharedTargetsData).forEach(id => {
+                    const data = sharedTargetsData[id];
+                    const dianaGroup = createDiana(data.radius, id);
+                    dianaGroup.position.set(data.x, data.y, data.z);
+                    scene.add(dianaGroup);
+                    targetsArray.push({ group: dianaGroup, behavior: { type: 'static' } });
+                });
+                return;
+            }
+
+            // Modo un jugador estándar
+            const totalTargets = 3;
+            let radius = Math.max(0.35, 1.1 - (stats.level * 0.1));
+            const zPos = selectedMap === 'aimlabs' ? -13.5 : -16;
+
+            for (let i = 0; i < totalTargets; i++) {
+                const id = "local_" + i;
+                const dianaGroup = createDiana(radius, id);
+                const x = (Math.random() - 0.5) * (selectedMap === 'aimlabs' ? 24 : 28);
+                const y = Math.random() * (selectedMap === 'aimlabs' ? 5.5 : 4.0) + 1.6;
+                const z = zPos - (Math.random() * 1);
+
+                dianaGroup.position.set(x, y, z);
+                scene.add(dianaGroup);
+                targetsArray.push({ group: dianaGroup, behavior: { type: 'static' } });
+            }
+        }
+
+        // Generador de oleadas globales exclusivo del host (creador de sala) para que las dianas sean idénticas
+        function generateMultiplayerWaveInDB() {
+            if (!isMultiplayer || !db) return;
+            const newTargets = {};
+            let radius = Math.max(0.35, 1.1 - (stats.level * 0.1));
+            const zPos = selectedMap === 'aimlabs' ? -13.5 : -16;
+
+            for(let i = 0; i < 3; i++) {
+                const tId = "tgt_" + Math.random().toString(36).substring(2, 7);
+                newTargets[tId] = {
+                    x: (Math.random() - 0.5) * (selectedMap === 'aimlabs' ? 23 : 27),
+                    y: Math.random() * 4.5 + 1.6,
+                    z: zPos,
+                    radius: radius
+                };
+            }
+            set(ref(db, `rooms/${currentRoomId}/targets`), newTargets);
+        }
+
+        // ==========================================
+        // ⌨️ MOVIMIENTO Y FÍSICAS
+        // ==========================================
+        function handleKey(e, isDown) {
+            switch (e.code) {
+                case 'KeyW': keyboard.w = isDown; break;
+                case 'KeyS': keyboard.s = isDown; break;
+                case 'KeyA': keyboard.a = isDown; break;
+                case 'KeyD': keyboard.d = isDown; break;
+                case 'Space':
+                    if (isDown && isGrounded && controls.isLocked) {
+                        playerVelocity.y = JUMP_FORCE;
+                        isGrounded = false;
+                    }
+                    break;
+            }
+        }
+
+        function updateMovement(delta) {
+            if (!controls || !controls.isLocked) return;
+
+            playerVelocity.x -= playerVelocity.x * 10.0 * delta;
+            playerVelocity.z -= playerVelocity.z * 10.0 * delta;
+            playerVelocity.y -= GRAVITY * delta;
+
+            const moveDirection = new THREE.Vector3();
+            if (keyboard.w) moveDirection.z -= 1;
+            if (keyboard.s) moveDirection.z += 1;
+            if (keyboard.a) moveDirection.x -= 1;
+            if (keyboard.d) moveDirection.x += 1;
+            moveDirection.normalize();
+
+            if (keyboard.w || keyboard.s) playerVelocity.z += moveDirection.z * 60.0 * delta;
+            if (keyboard.a || keyboard.d) playerVelocity.x += moveDirection.x * 60.0 * delta;
+
+            controls.moveRight(playerVelocity.x * delta);
+            controls.moveForward(-playerVelocity.z * delta);
+            camera.position.y += playerVelocity.y * delta;
+
+            let groundHeight = 0; 
+            
+            if (selectedMap === 'aimlabs' && obstaclesArray.length > 0) {
+                const rayOrigin = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z);
+                const downwardRay = new THREE.Raycaster(rayOrigin, new THREE.Vector3(0, -1, 0), 0, 3);
+                const intersections = downwardRay.intersectObjects(obstaclesArray);
+
+                if (intersections.length > 0) {
+                    const distanceToBox = intersections[0].distance;
+                    if (distanceToBox <= PLAYER_HEIGHT) {
+                        groundHeight = camera.position.y - distanceToBox;
+                    }
+                }
+            }
+
+            if (camera.position.y <= groundHeight + PLAYER_HEIGHT) {
+                playerVelocity.y = 0;
+                camera.position.y = groundHeight + PLAYER_HEIGHT;
+                isGrounded = true;
+            }
+
+            const xLimit = selectedMap === 'aimlabs' ? 18 : 40;
+            const zLimitBack = selectedMap === 'aimlabs' ? 13 : 40;
+            const zLimitFront = selectedMap === 'aimlabs' ? -13 : -8;
+
+            if (camera.position.x > xLimit) camera.position.x = xLimit;
+            if (camera.position.x < -xLimit) camera.position.x = -xLimit;
+            if (camera.position.z > zLimitBack) camera.position.z = zLimitBack;
+            if (camera.position.z < zLimitFront) camera.position.z = zLimitFront;
+
+            // Transmitir posición al amigo de forma fluida (Cada 2 fotogramas para no saturar la red)
+            if (isMultiplayer && db) {
+                syncThrottle++;
+                if(syncThrottle % 2 === 0) {
+                    update(ref(db, `rooms/${currentRoomId}/players/${playerId}`), {
+                        x: camera.position.x,
+                        y: camera.position.y - PLAYER_HEIGHT, // Sincroniza la base de los pies
+                        z: camera.position.z
+                    });
+                }
+            }
+        }
+
+        // ==========================================
+        // 🔫 SISTEMA DE DISPARO COMPARTIDO
+        // ==========================================
+        function shoot() {
+            if (!controls.isLocked) return;
+
+            const crosshair = document.getElementById('crosshair');
+            if (crosshair) {
+                crosshair.style.transform = 'translate(-50%, -50%) scale(2.2)';
+                crosshair.style.backgroundColor = '#ffffff';
+                setTimeout(() => {
+                    crosshair.style.transform = 'translate(-50%, -50%) scale(1)';
+                    crosshair.style.backgroundColor = '#00ffff';
+                }, 60);
+            }
+
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const activeGroups = targetsArray.map(t => t.group);
+            const intersects = raycaster.intersectObjects(activeGroups, true);
+
+            if (intersects.length > 0) {
+                let hitNode = intersects[0].object;
+                while (hitNode.parent && !hitNode.userData.isTargetRoot) {
+                    hitNode = hitNode.parent;
+                }
+
+                const targetMatch = targetsArray.find(t => t.group === hitNode);
+
+                if (targetMatch) {
+                    const hm = document.getElementById('hit-marker');
+                    if (hm) {
+                        hm.classList.add('hit');
+                        setTimeout(() => hm.classList.remove('hit'), 70);
+                    }
+
+                    const shotTargetId = targetMatch.group.userData.targetId;
+
+                    if (isMultiplayer) {
+                        // Enviar orden de eliminación de la diana a la base de datos común
+                        set(ref(db, `rooms/${currentRoomId}/targets/${shotTargetId}`), null);
+                        
+                        // Subir tus propios puntos de nivel local
+                        stats.score++;
+                        if (stats.score >= stats.nextLevelReq) {
+                            stats.level++;
+                            stats.score = 0;
+                            stats.nextLevelReq = 5 + (stats.level * 2);
+                        }
+                        updateUI();
+                        syncFirebaseStats();
+                    } else {
+                        // Modo offline normal
+                        scene.remove(targetMatch.group);
+                        targetsArray = targetsArray.filter(t => t !== targetMatch);
+                        stats.score++;
+                        if (stats.score >= stats.nextLevelReq) {
+                            stats.level++;
+                            stats.score = 0;
+                            stats.nextLevelReq = 5 + (stats.level * 2);
+                            spawnWave();
+                        } else if (targetsArray.length === 0) {
+                            spawnWave();
+                        }
+                        updateUI();
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 🔄 BUCLE DE RENDERIZADO
+        // ==========================================
+        function animate() {
+            const delta = clock.getDelta();
+            updateMovement(Math.min(delta, 0.1));
+
+            targetsArray.forEach((target) => {
+                target.group.lookAt(camera.position.x, target.group.position.y, camera.position.z);
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ==========================================
+        // 🌐 SISTEMA DE RED INTEGRADO (1VS1 EN TIEMPO REAL)
+        // ==========================================
+        function joinRoom(roomId, isHost) {
+            if(!db) return alert("Firebase no está conectado.");
+            currentRoomId = roomId;
+            isMultiplayer = true;
+            
+            const playerRef = ref(db, `rooms/${roomId}/players/${playerId}`);
+            set(playerRef, { level: stats.level, score: stats.score, x: 0, y: 0, z: 6 });
+            onDisconnect(playerRef).remove();
+
+            // Escuchar cambios de jugadores (Movimiento y puntuación del rival)
+            const playersRef = ref(db, `rooms/${roomId}/players`);
+            onValue(playersRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    const enemyId = Object.keys(data).find(id => id !== playerId);
+                    if(enemyId) {
+                        const enemyData = data[enemyId];
+                        
+                        // Crear el avatar 3D si no existía en el mapa
+                        if (!enemyAvatar) {
+                            enemyAvatar = createEnemyMesh();
+                        }
+                        
+                        // Actualizar la posición de tu amigo en tiempo real
+                        if(enemyData.x !== undefined) {
+                            enemyAvatar.position.set(enemyData.x, enemyData.y, enemyData.z);
+                        }
+
+                        document.getElementById('hud-right').classList.remove('hidden');
+                        document.getElementById('ui-enemy-level').innerText = enemyData.level;
+                        document.getElementById('ui-enemy-score').innerText = enemyData.score;
+                    } else {
+                        // El amigo se desconectó
+                        if(enemyAvatar) { scene.remove(enemyAvatar); enemyAvatar = null; }
+                        document.getElementById('hud-right').classList.add('hidden');
+                    }
+                }
+            });
+
+            // Escuchar sincronización de dianas del 1vs1
+            const targetsRef = ref(db, `rooms/${roomId}/targets`);
+            onValue(targetsRef, (snapshot) => {
+                const data = snapshot.val();
+                
+                // Si la oleada está vacía y eres el creador, generas una nueva ronda común
+                if (!data || Object.keys(data).length === 0) {
+                    if (isHost) {
+                        generateMultiplayerWaveInDB();
+                    }
+                } else {
+                    spawnWave(data);
+                }
+            });
+
+            openMapSelector();
+        }
+
+        function syncFirebaseStats() {
+            if(!isMultiplayer || !db) return;
+            update(ref(db, `rooms/${currentRoomId}/players/${playerId}`), {
+                level: stats.level,
+                score: stats.score
+            });
+        }
+
+        // ==========================================
+        // 🖥️ INTERFAZ DE USUARIO Y CONTROLADORES
+        // ==========================================
+        function updateUI() {
+            document.getElementById('ui-level').innerText = stats.level;
+            document.getElementById('ui-score').innerText = stats.score;
+            document.getElementById('ui-target').innerText = stats.nextLevelReq;
+            document.getElementById('ui-level-desc').innerText = levelDescriptions[stats.level] || "Desafío de Reacción Veloz";
+        }
+
+        function openMapSelector() {
+            uiLobby.classList.add('hidden');
+            uiMulti.classList.add('hidden');
+            uiMap.classList.remove('hidden');
+        }
+
+        function runGame() {
+            if (!scene) {
+                initGame();
+            } else {
+                resetPlayer();
+                buildEnvironment();
+                if(!isMultiplayer) spawnWave();
+            }
+            updateUI();
+            controls.lock();
+        }
+
+        document.getElementById('fov-slider').addEventListener('input', (e) => {
+            settings.fov = parseInt(e.target.value);
+            document.getElementById('fov-val').innerText = settings.fov;
+            if(camera) { camera.fov = settings.fov; camera.updateProjectionMatrix(); }
+        });
+
+        document.getElementById('sens-slider').addEventListener('input', (e) => {
+            settings.sens = parseFloat(e.target.value);
+            document.getElementById('sens-val').innerText = settings.sens.toFixed(1);
+            if(controls) controls.pointerSpeed = settings.sens;
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            stats.level = 1;
+            stats.score = 0;
+            stats.nextLevelReq = 5;
+            updateUI();
+            syncFirebaseStats();
+            alert("¡Progreso reiniciado con éxito!");
+        });
+
+        document.getElementById('btn-solo').addEventListener('click', () => {
+            isMultiplayer = false;
+            document.getElementById('hud-right').classList.add('hidden');
+            openMapSelector();
+        });
+
+        document.getElementById('btn-multi').addEventListener('click', () => {
+            uiLobby.classList.add('hidden');
+            uiMulti.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-back').addEventListener('click', () => {
+            uiMulti.classList.add('hidden');
+            uiLobby.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-map-back').addEventListener('click', () => {
+            uiMap.classList.add('hidden');
+            uiLobby.classList.remove('hidden');
+        });
+
+        document.getElementById('map-fortnite').addEventListener('click', () => {
+            selectedMap = 'fortnite';
+            runGame();
+        });
+
+        document.getElementById('map-aimlabs').addEventListener('click', () => {
+            selectedMap = 'aimlabs';
+            runGame();
+        });
+
+        document.getElementById('btn-create').addEventListener('click', () => {
+            const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            alert(`CÓDIGO DE SALA ENVIADO: ${randomCode}\nCompártelo con tu amigo.`);
+            joinRoom(randomCode, true); // True = Es el Host encargado de crear las dianas
+        });
+
+        document.getElementById('btn-join').addEventListener('click', () => {
+            const code = document.getElementById('room-code').value.trim().toUpperCase();
+            if(code) joinRoom(code, false); // False = Invitado
+            else alert("Escribe un código.");
+        });
+    </script>
+</body>
+</html>
